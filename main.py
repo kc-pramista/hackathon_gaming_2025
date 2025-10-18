@@ -1,5 +1,7 @@
 import pygame
-from button import Button # type : ignore
+
+from button import Button
+from shop import Shop
 
 pygame.init()
 screen = pygame.display.set_mode((1000, 720))
