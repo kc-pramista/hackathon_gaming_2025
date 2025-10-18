@@ -103,15 +103,6 @@ class Fish(pygame.sprite.Sprite):
             
             self.rect.y -= 1 # Float up
             self.image.set_alpha(new_a)
-    
-
-    def lifespan(self):
-        if(self.currentlife > 0):
-            self.currentlife = self.currentlife - 1
-        elif(self.currentlife == 0):
-            if(self.alive): 
-                self.image = pygame.transform.rotate(self.image, 180)
-                self.alive = False
 
 
 pygame.init()
@@ -399,6 +390,5 @@ while running:
     if dt > 360:
         dt = 0
     clock.tick(60)
-
 pygame.quit()
 sys.exit()
