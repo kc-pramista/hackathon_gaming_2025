@@ -88,9 +88,9 @@ count_font = pygame.font.SysFont('Arial', 32, bold=True)
 button_font = pygame.font.SysFont('Calibri', 18, bold=True)
 
 food_counts = {
-    'Food 1' : 3,
-    'Food 2' : 2,
-    'Food 3' : 5
+    'Food 1' : 5,
+    'Food 2' : 0,
+    'Food 3' : 0
 }
 
 balance = 100
@@ -130,14 +130,23 @@ feedingEnabled = True
 
 mouseClicked = False
 
-shopFoodOne = Button(screen, "green", 300, 200, 30)
+shop_width = 300
+shop_height = 200
+
+button_start_point = screen_width / 2 - shop_width / 2 + 50
+button_start_height = screen_height / 2 
+
+shopFoodOne = Button(screen, "green", button_start_point, button_start_height, 30, "Food 1")
 foodOneCost = 10
-shopFoodTwo = Button(screen, "green", 400, 200, 30)
+shopFoodTwo = Button(screen, "green", button_start_point + 100, button_start_height, 30, "Food 2")
 foodTwoCost = 20
-shopFoodThree = Button(screen, "green", 500, 200, 30)
+shopFoodThree = Button(screen, "green", button_start_point + 200, button_start_height, 30, "Food 3")
 foodThreeCost = 30
 
-balance = 100 # starting currency balance
+
+fish_multiplier = 1
+
+balance = 20 # starting currency balance
 
 mousePosX = 0
 mousePosY = 0
@@ -147,7 +156,7 @@ def getMousePosition():
 
 def drawShopInterface():
     # Draw the shop interface background
-    pygame.draw.rect(screen, "brown", (200 , 100, 600, 420))
+    pygame.draw.rect(screen, (50, 50, 50, 120), (screen_width / 2 - shop_width / 2, screen_height / 2 - shop_height / 2, shop_width, shop_height))
     shopFoodOne.draw()
     shopFoodTwo.draw()
     shopFoodThree.draw()
@@ -161,6 +170,8 @@ def toggleShopInterface():
     global feedingEnabled
     feedingEnabled = not feedingEnabled
     showShop = not showShop
+    
+dt = 0
 
 while running:
     # poll for events
@@ -306,6 +317,14 @@ while running:
 
     refreshButtons()
     pygame.display.flip()
+    
+    dt += 1
+    
+    if dt % 180 == 0:
+        balance += 1 * fish_multiplier
+    
+    if dt > 360:
+        dt = 0
     clock.tick(60)
 
 pygame.quit()
