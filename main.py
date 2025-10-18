@@ -191,7 +191,7 @@ while running:
                     if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
                         food_counts[food_name] -= 1
                         new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
-                        print(food_name)
+                        #print(food_name)
                         foods.append(new_food)
                         dragged_food = new_food
                         break
@@ -271,6 +271,8 @@ while running:
     pygame.draw.rect(screen, BUTTON_COLOR, shop_button_rect, border_radius = 10)
     
     shop_text_surface = count_font.render("Shop", True, UI_TEXT_COLOR)
+    if(showShop):
+        shop_text_surface = count_font.render("Close", True, UI_TEXT_COLOR)
     shop_text_rect = shop_text_surface.get_rect(center=shop_button_rect.center)
     screen.blit(shop_text_surface, shop_text_rect)
     
