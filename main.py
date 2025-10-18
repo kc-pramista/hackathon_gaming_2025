@@ -25,7 +25,7 @@ shop_button_rect = pygame.Rect(screen_width - 170, 20, 130, 40)
 
 CONTAINER_PADDING = 20
 
-bg = pygame.image.load("assets/ocean_bg.png").convert()
+bg = pygame.image.load("assets/ocean_bg.jpeg").convert()
 bg = pygame.transform.scale(bg, (screen_width, screen_height))
 
 container = pygame.Rect(
@@ -40,12 +40,14 @@ count_font = pygame.font.SysFont('Arial', 32, bold=True)
 button_font = pygame.font.SysFont('Calibri', 18, bold=True)
 
 food_counts = {
-    'Food 1' : 3,
-    'Food 2' : 2,
-    'Food 3' : 5
+    'Food 1' : 5,
+    'Food 2' : 0,
+    'Food 3' : 0
 }
 food_keys = ['Food 1', 'Food 2', 'Food 3']
 top_bar_rect = pygame.Rect(0,0,screen_width, 80)
+
+food_drop_sound = pygame.mixer.Sound('sounds/food_dropping.mp3')
 
 class Food:
     def __init__(self, x, y, color, food_type):
@@ -92,6 +94,10 @@ while running:
             if event.button == 1 and dragged_food is not None:
                 dragged_food.is_dragged = False
                 dragged_food.is_falling = True
+
+                if food_drop_sound:
+                    food_drop_sound.play()
+
                 dragged_food = None
         elif event.type == pygame.MOUSEMOTION:
             if dragged_food is not None:
@@ -101,8 +107,6 @@ while running:
         food.move()
         if food.rect.top > screen_height:
             foods.remove(food)
-
-
 
     # bubbles
     if random.randint(1, 80) == 1:
@@ -122,7 +126,7 @@ while running:
         bubble['y'] -= bubble['speed']
 
     # removing bubbles that go off the screen
-    bubbles = [bubble for bubble in bubbles if bubble['y'] > top_bar_rect.bottom]
+    bubbles = [bubble for bubble in bubbles if bubble['y'] > top_bar_rect.bottom + radius]
 
     # drawing
     screen.blit(bg, (0,0))
