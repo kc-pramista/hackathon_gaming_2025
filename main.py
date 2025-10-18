@@ -191,7 +191,6 @@ while running:
                     if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
                         food_counts[food_name] -= 1
                         new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
-                        print(food_name)
                         foods.append(new_food)
                         dragged_food = new_food
                         break
