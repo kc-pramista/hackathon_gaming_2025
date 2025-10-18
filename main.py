@@ -163,7 +163,7 @@ class Food:
 
     def move(self):
         if self.is_falling:
-            self.rect.y += 5
+            self.rect.y += 3
 
     def draw(self, surface):
         pygame.draw.ellipse(surface, self.color, self.rect)
