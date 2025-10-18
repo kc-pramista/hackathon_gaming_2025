@@ -42,6 +42,24 @@ food_counts = {
 food_keys = ['Food 1', 'Food 2', 'Food 3']
 top_bar_rect = pygame.Rect(0,0,screen_width, 80)
 
+class Food:
+    def __init__(self, x, y, color, food_type):
+        self.rect = pygame.Rect(x, y, 20, 20)
+        self.color = color
+        self.is_falling = False
+        self.is_dragged = True # Start in dragged state
+        self.food_type = food_type
+
+    def move(self):
+        if self.is_falling:
+            self.rect.y += 5
+
+    def draw(self, surface):
+        pygame.draw.ellipse(surface, self.color, self.rect)
+
+foods = []
+dragged_food = None
+label_rects = {}
 bubbles = []
 clock = pygame.time.Clock()
 
@@ -51,6 +69,28 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:  # X button
             running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left mouse button
+                for food_name, rect in label_rects.items():
+                    if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
+                        food_counts[food_name] -= 1
+                        new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
+                        foods.append(new_food)
+                        dragged_food = new_food
+                        break
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1 and dragged_food is not None:
+                dragged_food.is_dragged = False
+                dragged_food.is_falling = True
+                dragged_food = None
+        elif event.type == pygame.MOUSEMOTION:
+            if dragged_food is not None:
+                dragged_food.rect.center = event.pos
+
+    for food in foods[:]:
+        food.move()
+        if food.rect.top > screen_height:
+            foods.remove(food)
 
     # bubbles
     if random.randint(1, 80) == 1:
@@ -97,6 +137,7 @@ while running:
         #putting name of the food
         label_surface = label_font.render(food_name, True, UI_TEXT_COLOR)
         label_rect = label_surface.get_rect(center=(column_x, 25))
+        label_rects[food_name] = label_rect
         screen.blit(label_surface, label_rect)
 
         #value left of the food
@@ -124,6 +165,9 @@ while running:
         top_left_x = bubble['x'] - radius
         top_left_y = bubble['y'] - radius
         screen.blit(bubble_surface, (top_left_x, top_left_y))
+
+    for food in foods:
+        food.draw(screen)
 
     pygame.display.flip()
     clock.tick(60)  # limits FPS to 60
