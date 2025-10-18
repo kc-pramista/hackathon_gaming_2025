@@ -11,6 +11,9 @@ SKY_BLUE = (85, 156, 195)
 Ocean_color = (2, 62, 138)
 BUBBLE_COLOR = (200, 225, 255, 100)
 REFLECTION_COLOR = (255, 255, 255, 120)
+UI_BG_COLOR = (10, 25, 47, 180)
+UI_TEXT_COLOR = (220, 220, 220)
+UI_COUNT_COLOR = (255, 255, 255) 
 
 # sizes
 screen_width, screen_height = 1280, 720
@@ -27,6 +30,17 @@ container = pygame.Rect(
     screen_width - CONTAINER_PADDING * 2,
     screen_height - CONTAINER_PADDING * 2,
 )
+
+label_font = pygame.font.SysFont('Arial', 22)
+count_font = pygame.font.SysFont('Arial', 32, bold=True)
+
+food_counts = {
+    'Food 1' : 3,
+    'Food 2' : 2,
+    'Food 3' : 5
+}
+food_keys = ['Food 1', 'Food 2', 'Food 3']
+top_bar_rect = pygame.Rect(0,0,screen_width, 80)
 
 bubbles = []
 clock = pygame.time.Clock()
@@ -56,10 +70,41 @@ while running:
         bubble['y'] -= bubble['speed']
 
     # removing bubbles that go off the screen
-    bubbles = [bubble for bubble in bubbles if bubble['y'] > -bubble['radius']]
+    bubbles = [bubble for bubble in bubbles if bubble['y'] > top_bar_rect.bottom]
 
     # drawing
     screen.blit(bg, (0,0))
+
+    ui_surface = pygame.Surface((top_bar_rect.width, top_bar_rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(ui_surface, UI_BG_COLOR, ui_surface.get_rect())
+    screen.blit(ui_surface, (top_bar_rect.x, top_bar_rect.y))
+
+
+    spacing = 300
+    screen_center_x = screen_width/2
+
+    column_positions = [
+        screen_center_x - spacing,
+        screen_center_x,
+        screen_center_x + spacing
+    ]
+
+    for i, food_name in enumerate(food_keys):
+        column_x = column_positions[i]
+
+        count = food_counts[food_name]
+
+        #putting name of the food
+        label_surface = label_font.render(food_name, True, UI_TEXT_COLOR)
+        label_rect = label_surface.get_rect(center=(column_x, 25))
+        screen.blit(label_surface, label_rect)
+
+        #value left of the food
+        count_surface = count_font.render(str(count), True, UI_COUNT_COLOR)
+        count_rect = count_surface.get_rect(center=(column_x, 55))
+        screen.blit(count_surface, count_rect)
+
+
 
     # Draw bubbles
     for bubble in bubbles:
