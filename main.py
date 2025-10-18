@@ -1,46 +1,93 @@
 import pygame
-import os
+import sys
 import random
-
-from button import Button
-
+import webbrowser
 
 class Fish(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        # self.image = pygame.image.load("Assets/Images/Bass.png")
-        #self.rect = self.image.get_rect()
+        self.image = pygame.image.load("Assets/Images/Bass.png")
+        self.rect = self.image.get_rect()
 
-        #self.rect.x = 500
-        #self.rect.y = 320
-
-        self.x = 500
-        self.y = 320
+        self.rect.x = 500
+        self.rect.y = 320
         self.speed = 2
 
     def update(self):
-        # self.rect.x += self.speed
-        # if self.rect.x >= 975:
-            #self.speed = -self.speed
-        #if self.rect.x <= 15:
-            #self.speed = -self.speed  
-
-        self.x += self.speed
-        if self.x >= 975:
+        self.rect.x += self.speed
+        if self.rect.x >= 975:
             self.speed = -self.speed
-        if self.x <= 15:
-            self.speed = -self.speed
+        if self.rect.x <= 15:
+            self.speed = -self.speed  
 
     def render(self, display):
-        #display.blit(self.image, (self.x_pos, self.y_pos))
-        pygame.draw.circle(display, "white", (self.x, self.y), 20)
+        display.blit(self.image, (self.x_pos, self.y_pos))
 
-# Pygame Setup
 pygame.init()
-screen = pygame.display.set_mode((1000, 720))
-pygame.display.set_caption("fish tank")
+pygame.display.set_caption("Relaxing Fish Game")
+
+# DEFINITIONS
+SKY_BLUE = (85, 156, 195)
+Ocean_color = (2, 62, 138)
+BUBBLE_COLOR = (200, 225, 255, 100)
+REFLECTION_COLOR = (255, 255, 255, 120)
+UI_BG_COLOR = (10, 25, 47, 180)
+UI_TEXT_COLOR = (220, 220, 220)
+UI_COUNT_COLOR = (255, 255, 255) 
+BUTTON_COLOR = (72, 118, 255)
+BUTTON_SHADOW_COLOR = (41, 67, 145)
+
+# sizes
+screen_width, screen_height = 1280, 720
+screen = pygame.display.set_mode((screen_width, screen_height))
+shop_button_rect = pygame.Rect(screen_width - 170, 20, 130, 40)
+
+CONTAINER_PADDING = 20
+
+bg = pygame.image.load("assets/ocean_bg.png").convert()
+bg = pygame.transform.scale(bg, (screen_width, screen_height))
+
+container = pygame.Rect(
+    CONTAINER_PADDING,
+    CONTAINER_PADDING,
+    screen_width - CONTAINER_PADDING * 2,
+    screen_height - CONTAINER_PADDING * 2,
+)
+
+label_font = pygame.font.SysFont('Arial', 22)
+count_font = pygame.font.SysFont('Arial', 32, bold=True)
+button_font = pygame.font.SysFont('Calibri', 18, bold=True)
+
+food_counts = {
+    'Food 1' : 3,
+    'Food 2' : 2,
+    'Food 3' : 5
+}
+food_keys = ['Food 1', 'Food 2', 'Food 3']
+top_bar_rect = pygame.Rect(0,0,screen_width, 80)
+
+class Food:
+    def __init__(self, x, y, color, food_type):
+        self.rect = pygame.Rect(x, y, 20, 20)
+        self.color = color
+        self.is_falling = False
+        self.is_dragged = True # Start in dragged state
+        self.food_type = food_type
+
+    def move(self):
+        if self.is_falling:
+            self.rect.y += 5
+
+    def draw(self, surface):
+        pygame.draw.ellipse(surface, self.color, self.rect)
+
+foods = []
+dragged_food = None
+label_rects = {}
+bubbles = []
 clock = pygame.time.Clock()
+
 running = True
 
 # sprites = pygame.sprite.Group()
@@ -63,10 +110,6 @@ foodThreeCost = 30
 
 balance = 100 # starting currency balance
 
-inventoryFoodOne = Button(screen, "yellow", 100, 670, 30)
-inventoryFoodTwo = Button(screen, "yellow", 200, 670, 30)
-inventoryFoodThree = Button(screen, "yellow", 300, 670, 30)
-
 def getMousePosition():
     global mousePosX, mousePosY
     mousePosX, mousePosY = pygame.mouse.get_pos()
@@ -83,14 +126,6 @@ def drawFishWindow():
     pass
     # Function calls for fish elements
 
-def drawConstantElements():
-    # Draw the constant elements
-    pygame.draw.rect(screen, "brown", (0, 620, 1000, 100))
-    shopButton.draw()
-    inventoryFoodOne.draw()
-    inventoryFoodTwo.draw()
-    inventoryFoodThree.draw()
-
 def refreshButtons():
     global mouseClicked
     mouseClicked = False
@@ -101,21 +136,122 @@ def toggleShopInterface():
     feedingEnabled = not feedingEnabled
     showShop = not showShop
 
-
 while running:
+    # poll for events
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+                #check if shop should be opened when mouse clicks
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if shop_button_rect.collidepoint(event.pos):
+                toggleShopInterface()
+        if event.type == pygame.QUIT:  # X button
             running = False
-        if event.type == pygame.MOUSEBUTTONUP:
-            mouseClicked = True
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left mouse button
+                for food_name, rect in label_rects.items():
+                    if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
+                        food_counts[food_name] -= 1
+                        new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
+                        foods.append(new_food)
+                        dragged_food = new_food
+                        break
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1 and dragged_food is not None:
+                dragged_food.is_dragged = False
+                dragged_food.is_falling = True
+                dragged_food = None
+        elif event.type == pygame.MOUSEMOTION:
+            if dragged_food is not None:
+                dragged_food.rect.center = event.pos
+
+    for food in foods[:]:
+        food.move()
+        if food.rect.top > screen_height:
+            foods.remove(food)
+
+
+
+    # bubbles
+    if random.randint(1, 80) == 1:
+        x_pos = random.randint(CONTAINER_PADDING, screen_width - CONTAINER_PADDING)
+        radius = random.randint(10, 30)
+        speed = random.uniform(0.5, 2.5)
+        new_bubble = {
+            'x': x_pos,
+            'y': screen_height + radius,
+            'radius': radius,
+            'speed': speed
+        }
+        bubbles.append(new_bubble)
+
+    # bubble are going up
+    for bubble in bubbles:
+        bubble['y'] -= bubble['speed']
+
+    # removing bubbles that go off the screen
+    bubbles = [bubble for bubble in bubbles if bubble['y'] > top_bar_rect.bottom]
+
+    # drawing
+    screen.blit(bg, (0,0))
+
+    ui_surface = pygame.Surface((top_bar_rect.width, top_bar_rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(ui_surface, UI_BG_COLOR, ui_surface.get_rect())
+    screen.blit(ui_surface, (top_bar_rect.x, top_bar_rect.y))
+
+
+    spacing = 300
+    screen_center_x = screen_width/2
+
+    column_positions = [
+        screen_center_x - spacing,
+        screen_center_x,
+        screen_center_x + spacing
+    ]
+
+    for i, food_name in enumerate(food_keys):
+        column_x = column_positions[i]
+
+        count = food_counts[food_name]
+
+        #putting name of the food
+        label_surface = label_font.render(food_name, True, UI_TEXT_COLOR)
+        label_rect = label_surface.get_rect(center=(column_x, 25))
+        label_rects[food_name] = label_rect
+        screen.blit(label_surface, label_rect)
+
+        #value left of the food
+        count_surface = count_font.render(str(count), True, UI_COUNT_COLOR)
+        count_rect = count_surface.get_rect(center=(column_x, 55))
+        screen.blit(count_surface, count_rect)
+
+    #button for shop
+    pygame.draw.rect(screen, BUTTON_COLOR, shop_button_rect, border_radius = 10)
     
-    getMousePosition()
+    
+    shop_text_surface = count_font.render("Shop", True, UI_TEXT_COLOR)
+    shop_text_rect = shop_text_surface.get_rect(center=shop_button_rect.center)
+    screen.blit(shop_text_surface, shop_text_rect)
 
-    #sprites.update()
-    fish.update()
+    # Draw bubbles
+    for bubble in bubbles:
+        radius = int(bubble['radius'])
+        bubble_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
 
-    # Bottom Layer of drawing frame
-    screen.fill("blue")
+        pygame.draw.circle(bubble_surface, BUBBLE_COLOR, (radius, radius), radius)
+
+        # reflection in bubble
+        reflection_width = int(radius * 0.7)
+        reflection_height = int(radius * 0.4)
+        reflection_rect = pygame.Rect(0, 0, reflection_width, reflection_height)
+        reflection_rect.center = (radius + int(radius * 0.2), radius - int(radius * 0.2))
+        
+        pygame.draw.ellipse(bubble_surface, REFLECTION_COLOR, reflection_rect)
+
+        top_left_x = bubble['x'] - radius
+        top_left_y = bubble['y'] - radius
+        screen.blit(bubble_surface, (top_left_x, top_left_y))
+
+    for food in foods:
+        food.draw(screen)
 
     #sprites.draw(screen)
     fish.render(screen)
@@ -135,26 +271,10 @@ while running:
                 print("Food Three Purchased")
 
     drawFishWindow()
-    if feedingEnabled and mouseClicked:
-        # Handle feeding logic if enabled
-        if inventoryFoodOne.is_hovering((mousePosX, mousePosY)):
-            # attach food to mouse cursor
-            print("Fed with Food One")
-        elif inventoryFoodTwo.is_hovering((mousePosX, mousePosY)):
-            # attach food to mouse cursor
-            print("Fed with Food Two")
-        elif inventoryFoodThree.is_hovering((mousePosX, mousePosY)):
-            # attach food to mouse cursor
-            print("Fed with Food Three")
-        
-    # Top Layer of drawing frame
-    drawConstantElements()  
-
-    if shopButton.is_hovering((mousePosX, mousePosY)) and mouseClicked:
-        toggleShopInterface()
 
     refreshButtons()
     pygame.display.flip()
     clock.tick(60)
 
 pygame.quit()
+sys.exit()
