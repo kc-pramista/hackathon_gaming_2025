@@ -7,22 +7,24 @@ pygame.init()
 pygame.display.set_caption("Relaxing Fish Game")
 
 # DEFINITIONS
-SKY_BLUE = (85, 156, 195)
+
 Ocean_color = (2, 62, 138)
 BUBBLE_COLOR = (200, 225, 255, 100)
 REFLECTION_COLOR = (255, 255, 255, 120)
-UI_BG_COLOR = (10, 25, 47, 180)
-UI_TEXT_COLOR = (220, 220, 220)
-UI_COUNT_COLOR = (255, 255, 255) 
 
 # sizes
 screen_width, screen_height = 1280, 720
 screen = pygame.display.set_mode((screen_width, screen_height))
 
-CONTAINER_PADDING = 20
+background_image = pygame.image.load('assets/ocean_bg.png')
+background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
 
-bg = pygame.image.load("assets/ocean_bg.png").convert()
-bg = pygame.transform.scale(bg, (screen_width, screen_height))
+CONTAINER_PADDING = 20
+BORDER_WIDTH = 5
+SEABED_HEIGHT = 60
+
+top_bar_rect = pygame.Rect(0, 0, screen_width, 60)
+drop_zone = pygame.Rect(0, 0, screen_width, 60)
 
 container = pygame.Rect(
     CONTAINER_PADDING,
@@ -31,29 +33,67 @@ container = pygame.Rect(
     screen_height - CONTAINER_PADDING * 2,
 )
 
-label_font = pygame.font.SysFont('Arial', 22)
-count_font = pygame.font.SysFont('Arial', 32, bold=True)
+class Food:
+    def __init__(self, x, y, color):
+        self.rect = pygame.Rect(x, y, 20, 20)
+        self.color = color
+        self.is_falling = False
+        self.is_dragged = False
 
-food_counts = {
-    'Food 1' : 3,
-    'Food 2' : 2,
-    'Food 3' : 5
-}
-food_keys = ['Food 1', 'Food 2', 'Food 3']
-top_bar_rect = pygame.Rect(0,0,screen_width, 80)
+    def move(self):
+        if self.is_falling:
+            self.rect.y += 5
 
+    def draw(self, surface):
+        pygame.draw.ellipse(surface, self.color, self.rect)
+
+foods = [
+    Food(300, 100, (255, 0, 0)),
+    Food(400, 100, (0, 255, 0)),
+    Food(500, 100, (0, 0, 255)),
+    Food(600, 100, (255, 255, 0)),
+    Food(700, 100, (255, 0, 255)),
+]
+dragged_food = None
 bubbles = []
 clock = pygame.time.Clock()
-
 running = True
 while running:
-    # poll for events
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:  # X button
+        if event.type == pygame.QUIT:
             running = False
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1: # Left mouse button
+                for food in foods:
+                    # You can only pick up food that isn't already falling
+                    if food.rect.collidepoint(event.pos) and not food.is_falling:
+                        food.is_dragged = True
+                        dragged_food = food
+                        break
+        
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1 and dragged_food is not None:
+                dragged_food.is_dragged = False
+                # If the food is released below the drop zone, it starts falling
+                if not drop_zone.contains(dragged_food.rect):
+                    dragged_food.is_falling = True
+                dragged_food = None
+        
+        elif event.type == pygame.MOUSEMOTION:
+            if dragged_food is not None:
+                dragged_food.rect.center = event.pos
+                dragged_food.rect.clamp_ip(container)
+
+
+        for food in foods[:]: # Iterate over a copy
+            food.move()
+        # Remove food that has fallen off the bottom of the screen
+            if food.rect.top > container.bottom:
+                foods.remove(food)
 
     # bubbles
-    if random.randint(1, 80) == 1:
+    if random.randint(1, 60) == 1:
         x_pos = random.randint(CONTAINER_PADDING, screen_width - CONTAINER_PADDING)
         radius = random.randint(10, 30)
         speed = random.uniform(0.5, 2.5)
@@ -73,60 +113,21 @@ while running:
     bubbles = [bubble for bubble in bubbles if bubble['y'] > top_bar_rect.bottom]
 
     # drawing
-    screen.blit(bg, (0,0))
-
-    ui_surface = pygame.Surface((top_bar_rect.width, top_bar_rect.height), pygame.SRCALPHA)
-    pygame.draw.rect(ui_surface, UI_BG_COLOR, ui_surface.get_rect())
-    screen.blit(ui_surface, (top_bar_rect.x, top_bar_rect.y))
-
-
-    spacing = 300
-    screen_center_x = screen_width/2
-
-    column_positions = [
-        screen_center_x - spacing,
-        screen_center_x,
-        screen_center_x + spacing
-    ]
-
-    for i, food_name in enumerate(food_keys):
-        column_x = column_positions[i]
-
-        count = food_counts[food_name]
-
-        #putting name of the food
-        label_surface = label_font.render(food_name, True, UI_TEXT_COLOR)
-        label_rect = label_surface.get_rect(center=(column_x, 25))
-        screen.blit(label_surface, label_rect)
-
-        #value left of the food
-        count_surface = count_font.render(str(count), True, UI_COUNT_COLOR)
-        count_rect = count_surface.get_rect(center=(column_x, 55))
-        screen.blit(count_surface, count_rect)
-
-
+    screen.blit(background_image, (0,0))
 
     # Draw bubbles
     for bubble in bubbles:
-        radius = int(bubble['radius'])
-        bubble_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        bubble_surface = pygame.Surface((bubble['radius'] * 2, bubble['radius'] * 2), pygame.SRCALPHA)
+        pygame.draw.circle(bubble_surface, BUBBLE_COLOR, (bubble['radius'], bubble['radius']), bubble['radius'])
+        screen.blit(bubble_surface, (bubble['x'] - bubble['radius'], bubble['y'] - bubble['radius']))
 
-        pygame.draw.circle(bubble_surface, BUBBLE_COLOR, (radius, radius), radius)
 
-        # reflection in bubble
-        reflection_width = int(radius * 0.7)
-        reflection_height = int(radius * 0.4)
-        reflection_rect = pygame.Rect(0, 0, reflection_width, reflection_height)
-        reflection_rect.center = (radius + int(radius * 0.2), radius - int(radius * 0.2))
-        
-        pygame.draw.ellipse(bubble_surface, REFLECTION_COLOR, reflection_rect)
 
-        top_left_x = bubble['x'] - radius
-        top_left_y = bubble['y'] - radius
-        screen.blit(bubble_surface, (top_left_x, top_left_y))
-
+    # draw food 
+    for food_item in foods:
+        food_item.draw(screen)
     pygame.display.flip()
-    clock.tick(60)  # limits FPS to 60
+    clock.tick(60)  
 
 pygame.quit()
 sys.exit()
