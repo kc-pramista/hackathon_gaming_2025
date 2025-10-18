@@ -138,11 +138,11 @@ shop_height = 200
 button_start_point = screen_width / 2 - shop_width / 2 + 50
 button_start_height = screen_height / 2 
 
-shopFoodOne = Button(screen, "green", button_start_point, button_start_height, 30, "Food 1")
+shopFoodOne = Button(screen, "green", button_start_point, button_start_height, 30, "Food 1", 10)
 foodOneCost = 10
-shopFoodTwo = Button(screen, "green", button_start_point + 100, button_start_height, 30, "Food 2")
+shopFoodTwo = Button(screen, "green", button_start_point + 100, button_start_height, 30, "Food 2", 20)
 foodTwoCost = 20
-shopFoodThree = Button(screen, "green", button_start_point + 200, button_start_height, 30, "Food 3")
+shopFoodThree = Button(screen, "green", button_start_point + 200, button_start_height, 30, "Food 3", 30)
 foodThreeCost = 30
 
 
