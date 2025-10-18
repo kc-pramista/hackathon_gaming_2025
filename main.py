@@ -3,26 +3,54 @@ import sys
 import random
 import webbrowser
 
+from button import Button
+
 class Fish(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.image = pygame.image.load("Assets/Images/Bass.png")
+        self.image = pygame.image.load("assets/Bass.png")
         self.rect = self.image.get_rect()
 
         self.rect.x = 500
         self.rect.y = 320
-        self.speed = 2
+        self.speedx = 2
+        self.speedy = 1
+
+        self.maxlife = 600
+        self.currentlife = 600
+        self.alive = True
 
     def update(self):
-        self.rect.x += self.speed
-        if self.rect.x >= 975:
-            self.speed = -self.speed
-        if self.rect.x <= 15:
-            self.speed = -self.speed  
+        if(self.alive):
+            self.rect.x += self.speedx
+            self.rect.y += self.speedy
+            if self.rect.x >= 975:
+                self.speedx = -self.speedx
+                self.image = pygame.transform.flip(self.image, True, False)
+            if self.rect.x <= 15:
+                self.speedx = -self.speedx
+                self.image = pygame.transform.flip(self.image, True, False) 
+            if self.rect.y <= 15:
+                self.speedy = -self.speedy
+            if self.rect.y >= 700:
+                self.speedy = -self.speedy
+        else:
+            new_a = self.image.get_alpha() - (255/120)
+            if(new_a <0):
+                new_a = 0
+            
+            self.rect.y = self.rect.y - self.speedx
+            self.image.set_alpha(new_a)
 
-    def render(self, display):
-        display.blit(self.image, (self.x_pos, self.y_pos))
+    def lifespan(self):
+        if(self.currentlife > 0):
+            self.currentlife = self.currentlife - 1
+        elif(self.currentlife == 0):
+            if(self.alive): 
+                self.image = pygame.transform.rotate(self.image, 180)
+                self.alive = False
+
 
 pygame.init()
 pygame.display.set_caption("Relaxing Fish Game")
@@ -64,6 +92,9 @@ food_counts = {
     'Food 2' : 2,
     'Food 3' : 5
 }
+
+balance = 100
+
 food_keys = ['Food 1', 'Food 2', 'Food 3']
 top_bar_rect = pygame.Rect(0,0,screen_width, 80)
 
@@ -90,16 +121,14 @@ clock = pygame.time.Clock()
 
 running = True
 
-# sprites = pygame.sprite.Group()
+sprites = pygame.sprite.Group()
 fish = Fish()
-# sprites.add(fish)
+sprites.add(fish)
 
 showShop = False # Flag to indicate if the shop interface is active
 feedingEnabled = True
 
 mouseClicked = False
-
-shopButton = Button(screen, "red", 900, 670, 30)
 
 shopFoodOne = Button(screen, "green", 300, 200, 30)
 foodOneCost = 10
@@ -110,6 +139,8 @@ foodThreeCost = 30
 
 balance = 100 # starting currency balance
 
+mousePosX = 0
+mousePosY = 0
 def getMousePosition():
     global mousePosX, mousePosY
     mousePosX, mousePosY = pygame.mouse.get_pos()
@@ -120,11 +151,6 @@ def drawShopInterface():
     shopFoodOne.draw()
     shopFoodTwo.draw()
     shopFoodThree.draw()
-
-def drawFishWindow():
-    # Draw the fish window background
-    pass
-    # Function calls for fish elements
 
 def refreshButtons():
     global mouseClicked
@@ -143,6 +169,7 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if shop_button_rect.collidepoint(event.pos):
                 toggleShopInterface()
+                feedingEnabled = not feedingEnabled
         if event.type == pygame.QUIT:  # X button
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -151,10 +178,12 @@ while running:
                     if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
                         food_counts[food_name] -= 1
                         new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
+                        print(food_name)
                         foods.append(new_food)
                         dragged_food = new_food
                         break
         elif event.type == pygame.MOUSEBUTTONUP:
+            mouseClicked = True
             if event.button == 1 and dragged_food is not None:
                 dragged_food.is_dragged = False
                 dragged_food.is_falling = True
@@ -167,8 +196,6 @@ while running:
         food.move()
         if food.rect.top > screen_height:
             foods.remove(food)
-
-
 
     # bubbles
     if random.randint(1, 80) == 1:
@@ -226,10 +253,12 @@ while running:
     #button for shop
     pygame.draw.rect(screen, BUTTON_COLOR, shop_button_rect, border_radius = 10)
     
-    
     shop_text_surface = count_font.render("Shop", True, UI_TEXT_COLOR)
     shop_text_rect = shop_text_surface.get_rect(center=shop_button_rect.center)
     screen.blit(shop_text_surface, shop_text_rect)
+    
+    balance_text = count_font.render("$" + str(balance), True, UI_TEXT_COLOR)
+    screen.blit(balance_text, (20, 20))
 
     # Draw bubbles
     for bubble in bubbles:
@@ -252,25 +281,28 @@ while running:
 
     for food in foods:
         food.draw(screen)
-
-    #sprites.draw(screen)
-    fish.render(screen)
+        
+    sprites.draw(screen)
+    sprites.update()
+    
+    getMousePosition()
 
     if showShop:
         drawShopInterface()
-
+        
         if mouseClicked:
-            if shopFoodOne.is_hovering((mousePosX, mousePosY)):
+            if shopFoodOne.is_hovering((mousePosX, mousePosY)) and balance >= foodOneCost:
                 # Add food one to inventory and subtract currency
-                print("Food One Purchased")
-            elif shopFoodTwo.is_hovering((mousePosX, mousePosY)):
+                food_counts['Food 1'] += 1
+                balance -= foodOneCost
+            elif shopFoodTwo.is_hovering((mousePosX, mousePosY)) and balance >= foodTwoCost:
                 # Add food two to inventory and subtract currency
-                print("Food Two Purchased")
-            elif shopFoodThree.is_hovering((mousePosX, mousePosY)):
+                food_counts['Food 2'] += 1
+                balance -= foodTwoCost
+            elif shopFoodThree.is_hovering((mousePosX, mousePosY)) and balance >= foodThreeCost:
                 # Add food three to inventory and subtract currency
-                print("Food Three Purchased")
-
-    drawFishWindow()
+                food_counts['Food 3'] += 1
+                balance -= foodThreeCost
 
     refreshButtons()
     pygame.display.flip()
