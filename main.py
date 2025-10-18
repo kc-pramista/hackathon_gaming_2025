@@ -2,6 +2,100 @@ import pygame
 import sys
 import random
 import webbrowser
+vec = pygame.math.Vector2
+
+class Fish(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+
+        self.image = pygame.image.load("Assets/Images/Bass.png")
+        self.rect = self.image.get_rect()
+
+        self.rect.x = 500
+        self.rect.y = 320
+        self.speedx = 2
+        self.speedy = 1
+
+        self.food = False
+
+        self.level = 1
+        self.exp = 0
+
+    def update(self):
+        if(self.food == True):
+            self.rect.x += self.speedx
+            self.rect.y += self.speedy
+
+            nearestFood = Food(0, 0, 0, 2)
+            if self.rect.y <= 15:
+                self.food = False
+                pass
+            
+            for x in foods:
+                foodC = vec(x.rect.center)
+                fishC = vec(fish.rect.center)
+                if fishC.distance_to(foodC) < 100:
+                    nearestFood = x
+            if nearestFood.rect.x  > fish.rect.x:
+                self.speedx = (nearestFood.rect.x - fish.rect.x)
+            elif nearestFood.rect.x  < fish.rect.x:
+                self.speedx = (nearestFood.rect.x - fish.rect.x)
+            if nearestFood.rect.y  > fish.rect.y:
+                self.speedy = (nearestFood.rect.y - fish.rect.y)
+            elif nearestFood.rect.y  < fish.rect.y:
+                self.speedy = (nearestFood.rect.y - fish.rect.y)
+        
+        if(self.food == False):
+            self.rect.x += self.speedx
+            self.rect.y += self.speedy
+            if self.rect.x >= 1250:
+                self.speedx = -self.speedx
+                self.image = pygame.transform.flip(self.image, True, False)
+            if self.rect.x <= 15:
+                self.speedx = -self.speedx
+                self.image = pygame.transform.flip(self.image, True, False) 
+            if self.rect.y <= 15:
+                self.speedy = -self.speedy
+            if self.rect.y >= 700:
+                self.speedy = -self.speedy
+
+    def level(self):
+        for x in foods:
+            if fish.rect.colliderect(x.rect):
+                
+                if x.food_type == 1:
+                    self.exp += 5
+                elif x.food_type == 2:
+                    self.exp += 10
+                else:
+                    self.exp += 25
+                foods.remove(x)
+                self.food = False
+        
+        if self.exp >= 100 and self.level < 10:
+            self.level += 1
+            self.level += 1
+        
+        center = self.rect.center 
+        self.image = pygame.transform.scale(self.original_image, (self.image.get_width() + (self.image.get_width() / 2), self.image.get_height() + (self.image.get_width() / 2))) 
+        self.rect = self.image.get_rect(center=center)
+
+
+
+class Food:
+    def __init__(self, x, y, color, food_type):
+        self.rect = pygame.Rect(x, y, 20, 20)
+        self.color = color
+        self.is_falling = False
+        self.is_dragged = True # Start in dragged state
+        self.food_type = food_type
+
+    def move(self):
+        if self.is_falling:
+            self.rect.y += 5
+
+    def draw(self, surface):
+        pygame.draw.ellipse(surface, self.color, self.rect)
 
 # pygame setup
 pygame.init()
@@ -47,26 +141,15 @@ food_counts = {
 food_keys = ['Food 1', 'Food 2', 'Food 3']
 top_bar_rect = pygame.Rect(0,0,screen_width, 80)
 
-class Food:
-    def __init__(self, x, y, color, food_type):
-        self.rect = pygame.Rect(x, y, 20, 20)
-        self.color = color
-        self.is_falling = False
-        self.is_dragged = True # Start in dragged state
-        self.food_type = food_type
-
-    def move(self):
-        if self.is_falling:
-            self.rect.y += 5
-
-    def draw(self, surface):
-        pygame.draw.ellipse(surface, self.color, self.rect)
-
 foods = []
 dragged_food = None
 label_rects = {}
 bubbles = []
 clock = pygame.time.Clock()
+
+sprites = pygame.sprite.Group()
+fish = Fish()
+sprites.add(fish)
 
 running = True
 while running:
@@ -164,6 +247,18 @@ while running:
     shop_text_surface = count_font.render("Shop", True, UI_TEXT_COLOR)
     shop_text_rect = shop_text_surface.get_rect(center=shop_button_rect.center)
     screen.blit(shop_text_surface, shop_text_rect)
+
+    #draw Fish
+    sprites.update()
+    sprites.draw(screen)
+
+    #Fish finds Food
+    for x in foods:
+        foodC = vec(x.rect.center)
+        fishC = vec(fish.rect.center)
+        if fishC.distance_to(foodC) < 100:
+            fish.food = True
+
 
     # Draw bubbles
     for bubble in bubbles:
