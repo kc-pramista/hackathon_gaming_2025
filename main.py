@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import webbrowser
 
 # pygame setup
 pygame.init()
@@ -14,10 +15,13 @@ REFLECTION_COLOR = (255, 255, 255, 120)
 UI_BG_COLOR = (10, 25, 47, 180)
 UI_TEXT_COLOR = (220, 220, 220)
 UI_COUNT_COLOR = (255, 255, 255) 
+BUTTON_COLOR = (72, 118, 255)
+BUTTON_SHADOW_COLOR = (41, 67, 145)
 
 # sizes
 screen_width, screen_height = 1280, 720
 screen = pygame.display.set_mode((screen_width, screen_height))
+shop_button_rect = pygame.Rect(screen_width - 170, 20, 130, 40)
 
 CONTAINER_PADDING = 20
 
@@ -33,6 +37,7 @@ container = pygame.Rect(
 
 label_font = pygame.font.SysFont('Arial', 22)
 count_font = pygame.font.SysFont('Arial', 32, bold=True)
+button_font = pygame.font.SysFont('Calibri', 18, bold=True)
 
 food_counts = {
     'Food 1' : 3,
@@ -67,6 +72,11 @@ running = True
 while running:
     # poll for events
     for event in pygame.event.get():
+                #check if shop should be opened when mouse clicks
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if shop_button_rect.collidepoint(event.pos):
+                print("Shop button clicked!")
+                webbrowser.open("https://www.google.com")
         if event.type == pygame.QUIT:  # X button
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -91,6 +101,8 @@ while running:
         food.move()
         if food.rect.top > screen_height:
             foods.remove(food)
+
+
 
     # bubbles
     if random.randint(1, 80) == 1:
@@ -145,7 +157,13 @@ while running:
         count_rect = count_surface.get_rect(center=(column_x, 55))
         screen.blit(count_surface, count_rect)
 
-
+    #button for shop
+    pygame.draw.rect(screen, BUTTON_COLOR, shop_button_rect, border_radius = 10)
+    
+    
+    shop_text_surface = count_font.render("Shop", True, UI_TEXT_COLOR)
+    shop_text_rect = shop_text_surface.get_rect(center=shop_button_rect.center)
+    screen.blit(shop_text_surface, shop_text_rect)
 
     # Draw bubbles
     for bubble in bubbles:
@@ -170,7 +188,7 @@ while running:
         food.draw(screen)
 
     pygame.display.flip()
-    clock.tick(60)  # limits FPS to 60
+    clock.tick(60)
 
 pygame.quit()
 sys.exit()
