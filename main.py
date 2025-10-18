@@ -7,21 +7,19 @@ pygame.init()
 pygame.display.set_caption("Relaxing Fish Game")
 
 # DEFINITIONS
-BLUE = (0, 0, 255)
 SKY_BLUE = (85, 156, 195)
 Ocean_color = (2, 62, 138)
-OCEAN_TOP = (7, 107, 171)
-OCEAN_BOTTOM = (2, 62, 138)
-SAND_COLOR = (242, 224, 159)
 BUBBLE_COLOR = (200, 225, 255, 100)
-BORDER_BLUE = (72, 118, 255)
+REFLECTION_COLOR = (255, 255, 255, 120)
 
 # sizes
 screen_width, screen_height = 1280, 720
 screen = pygame.display.set_mode((screen_width, screen_height))
 
 CONTAINER_PADDING = 20
-BORDER_WIDTH = 5
+
+bg = pygame.image.load("assets/ocean_bg.png").convert()
+bg = pygame.transform.scale(bg, (screen_width, screen_height))
 
 container = pygame.Rect(
     CONTAINER_PADDING,
@@ -41,7 +39,7 @@ while running:
             running = False
 
     # bubbles
-    if random.randint(1, 60) == 1:
+    if random.randint(1, 80) == 1:
         x_pos = random.randint(CONTAINER_PADDING, screen_width - CONTAINER_PADDING)
         radius = random.randint(10, 30)
         speed = random.uniform(0.5, 2.5)
@@ -61,11 +59,26 @@ while running:
     bubbles = [bubble for bubble in bubbles if bubble['y'] > -bubble['radius']]
 
     # drawing
-    screen.fill(Ocean_color)
+    screen.blit(bg, (0,0))
 
     # Draw bubbles
     for bubble in bubbles:
-        pygame.draw.circle(screen, SKY_BLUE, (bubble['x'], bubble['y']), bubble['radius'])
+        radius = int(bubble['radius'])
+        bubble_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+
+        pygame.draw.circle(bubble_surface, BUBBLE_COLOR, (radius, radius), radius)
+
+        # reflection in bubble
+        reflection_width = int(radius * 0.7)
+        reflection_height = int(radius * 0.4)
+        reflection_rect = pygame.Rect(0, 0, reflection_width, reflection_height)
+        reflection_rect.center = (radius + int(radius * 0.2), radius - int(radius * 0.2))
+        
+        pygame.draw.ellipse(bubble_surface, REFLECTION_COLOR, reflection_rect)
+
+        top_left_x = bubble['x'] - radius
+        top_left_y = bubble['y'] - radius
+        screen.blit(bubble_surface, (top_left_x, top_left_y))
 
     pygame.display.flip()
     clock.tick(60)  # limits FPS to 60
