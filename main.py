@@ -16,32 +16,94 @@ class Fish(pygame.sprite.Sprite):
         self.rect.y = 320
         self.speedx = 2
         self.speedy = 1
+        
+        self.seek_speed = 5         
+        self.target_food = None       
+        self.facing_right = True   
 
         self.maxlife = 600
         self.currentlife = 600
         self.alive = True
 
-    def update(self):
+
+    def update(self, foods_list): 
         if(self.alive):
-            self.rect.x += self.speedx
-            self.rect.y += self.speedy
-            if self.rect.x >= 975:
-                self.speedx = -self.speedx
-                self.image = pygame.transform.flip(self.image, True, False)
-            if self.rect.x <= 15:
-                self.speedx = -self.speedx
-                self.image = pygame.transform.flip(self.image, True, False) 
-            if self.rect.y <= 15:
-                self.speedy = -self.speedy
-            if self.rect.y >= 700:
-                self.speedy = -self.speedy
-        else:
+            
+            
+            # Check if our current target still exists
+            if self.target_food and self.target_food not in foods_list:
+                self.target_food = None
+            
+            # Find a new target if we don't have one
+            if self.target_food is None:
+                for food in foods_list:
+                    if food.is_falling:
+                        self.target_food = food
+                        break
+
+            
+            if self.target_food:
+                target_x, target_y = self.target_food.rect.center
+                fish_x, fish_y = self.rect.center
+                
+                dx, dy = target_x - fish_x, target_y - fish_y
+                # Calculate distance to normalize the speed
+                distance = (dx**2 + dy**2)**0.5
+
+                current_speed_x = 0
+                
+                if distance > 1: # Avoid division by zero and jittering
+                    # Calculate velocity vector
+                    current_speed_x = (dx / distance) * self.seek_speed
+                    current_speed_y = (dy / distance) * self.seek_speed
+                    
+                    self.rect.x += current_speed_x
+                    self.rect.y += current_speed_y
+
+                # eating
+                if self.rect.colliderect(self.target_food.rect):
+                    foods_list.remove(self.target_food) # Remove the food
+                    self.target_food = None
+                    self.currentlife = min(self.maxlife, self.currentlife + 100) 
+                
+                # Handle flipping
+                if current_speed_x > 0 and not self.facing_right:
+                    self.image = pygame.transform.flip(self.image, True, False)
+                    self.facing_right = True
+                elif current_speed_x < 0 and self.facing_right:
+                    self.image = pygame.transform.flip(self.image, True, False)
+                    self.facing_right = False
+
+            else:
+                self.rect.x += self.speedx
+                self.rect.y += self.speedy
+                
+                # Handle flipping
+                if self.speedx > 0 and not self.facing_right:
+                    self.image = pygame.transform.flip(self.image, True, False)
+                    self.facing_right = True
+                elif self.speedx < 0 and self.facing_right:
+                    self.image = pygame.transform.flip(self.image, True, False)
+                    self.facing_right = False
+                
+                # Handle wall bouncing
+                if self.rect.x >= 975:
+                    self.speedx = -abs(self.speedx) # Flip velocity
+                if self.rect.x <= 15:
+                    self.speedx = abs(self.speedx) # Flip velocity
+                if self.rect.y <= 15:
+                    self.speedy = abs(self.speedy)
+                if self.rect.y >= 700:
+                    self.speedy = -abs(self.speedy)
+        
+        else: # Fish is dead
             new_a = self.image.get_alpha() - (255/120)
             if(new_a <0):
                 new_a = 0
             
-            self.rect.y = self.rect.y - self.speedx
+            self.rect.y -= 1 # Float up
             self.image.set_alpha(new_a)
+    
 
     def lifespan(self):
         if(self.currentlife > 0):
@@ -127,7 +189,7 @@ sprites = pygame.sprite.Group()
 fish = Fish()
 sprites.add(fish)
 
-showShop = False # Flag to indicate if the shop interface is active
+showShop = False 
 feedingEnabled = True
 
 mouseClicked = False
@@ -148,7 +210,7 @@ foodThreeCost = 30
 
 fish_multiplier = 1
 
-balance = 20 # starting currency balance
+balance = 20 
 
 mousePosX = 0
 mousePosY = 0
@@ -182,24 +244,26 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if shop_button_rect.collidepoint(event.pos):
                 toggleShopInterface()
-                feedingEnabled = not feedingEnabled
+                # feedingEnabled = not feedingEnabled # This line was redundant
         if event.type == pygame.QUIT:  # X button
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left mouse button
-                for food_name, rect in label_rects.items():
-                    if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
-                        food_counts[food_name] -= 1
-                        new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
-                        #print(food_name)
-                        foods.append(new_food)
-                        dragged_food = new_food
-                        break
+                # --- MODIFIED: Check if feeding is enabled ---
+                if feedingEnabled:
+                    for food_name, rect in label_rects.items():
+                        if rect.collidepoint(event.pos) and food_counts[food_name] > 0:
+                            food_counts[food_name] -= 1
+                            new_food = Food(event.pos[0], event.pos[1], (255, 0, 0), food_name)
+                            #print(food_name)
+                            foods.append(new_food)
+                            dragged_food = new_food
+                            break
         elif event.type == pygame.MOUSEBUTTONUP:
             mouseClicked = True
             if event.button == 1 and dragged_food is not None:
                 dragged_food.is_dragged = False
-                dragged_food.is_falling = True
+                dragged_food.is_falling = True # This flags the fish to chase it
 
                 if food_drop_sound:
                     food_drop_sound.play()
@@ -302,7 +366,8 @@ while running:
         food.draw(screen)
         
     sprites.draw(screen)
-    sprites.update()
+    # --- MODIFIED: Pass the 'foods' list to the update method ---
+    sprites.update(foods) 
     
     getMousePosition()
 
